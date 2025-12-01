@@ -1,0 +1,8 @@
+{
+  "name": "Devcontainer with MySQL and Redis",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "devcontainer",
+  "workspaceFolder": "/workspace",
+  "remoteUser": "root",
+  "postCreateCommand": "curl -s 'https://get.sdkman.io' | bash && bash -c 'source ~/.sdkman/bin/sdkman-init.sh && sdk install java 21.0.9-graal && sdk install gradle 9.2.1'"
+}
