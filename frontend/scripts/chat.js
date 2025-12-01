@@ -1,4 +1,4 @@
-const API_URL = 'https://chat.hethond.com/api'
+const API_URL = 'http://localhost:8080/api';
 
 let currentUser;
 let currentChannel;
@@ -53,7 +53,7 @@ function addMessage(message) {
 
 function populateMessages(channel) {
     messageList.innerHTML = '';
-    fetch(API_URL + `/channels/${channel.id}/messages`, {headers: getRequestHeaders()})
+    fetch(API_URL + `/channels/${channel.id}/messages`, { headers: getRequestHeaders() })
         .then(response => response.json())
         .then(json => {
             const messages = json.data;
@@ -65,7 +65,7 @@ function populateMessages(channel) {
 }
 
 function populateChannels() {
-    fetch(API_URL + '/users/@me', {headers: getRequestHeaders()})
+    fetch(API_URL + '/users/@me', { headers: getRequestHeaders() })
         .then(response => response.json())
         .then(json => {
             // TODO -- Move this to a separate function
@@ -94,11 +94,11 @@ function populateChannels() {
 }
 
 function sendMessage() {
-    let requestBody = {content: messageField.value};
+    let requestBody = { content: messageField.value };
     console.log(requestBody);
 
     fetch(API_URL + `/channels/${currentChannel.id}/messages`,
-        { method:'POST', headers: getRequestHeaders(), body: JSON.stringify(requestBody)})
+        { method: 'POST', headers: getRequestHeaders(), body: JSON.stringify(requestBody) })
         .then(response => response.json())
         .then(json => {
             if (json.code === 200) {
@@ -115,9 +115,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let socket = new WebSocket('wss://chat.hethond.com/api/ws?token=' + sessionStorage.getItem('accessToken'));
     let stompClient = Stomp.over(socket);
 
-    stompClient.connect({}, function(frame) {
+    stompClient.connect({}, function (frame) {
         console.log("Connected")
-        stompClient.subscribe('/user/topic/messages', function(stompMessage) {
+        stompClient.subscribe('/user/topic/messages', function (stompMessage) {
             let message = JSON.parse(stompMessage.body);
             if (message.channel.id === currentChannel.id) {
                 addMessage(message);

@@ -1,8 +1,8 @@
 plugins {
 	java
 	application
-	id("org.springframework.boot") version "3.2.4"
-	id("io.spring.dependency-management") version "1.1.4"
+	id("org.springframework.boot") version "3.5.8"
+	id("io.spring.dependency-management") version "1.1.7"
 }
 
 application {
@@ -26,7 +26,6 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-websocket")
 
 	implementation("org.springframework.boot:spring-boot-starter-data-redis")
-	implementation("io.lettuce:lettuce-core:6.3.2.RELEASE")
 
 
 	implementation("com.vonage:server-sdk:8.6.0")

@@ -9,6 +9,10 @@ import com.hethond.chatbackend.entities.dto.MessageBasicDto;
 import com.hethond.chatbackend.services.ChannelService;
 import com.hethond.chatbackend.services.MessageService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -33,13 +37,18 @@ public class MessageController {
         this.messagingTemplate = messagingTemplate;
     }
 
-    // TODO -- Add pages
     @GetMapping("/channels/{channelId}/messages")
-    public ResponseEntity<ApiResponse<List<MessageBasicDto>>> getChannelMessages(
-            @PathVariable long channelId) {
-        List<Message> messages = messageService.findAllMessagesByChannelId(channelId);
-        List<MessageBasicDto> messageDtoList = messages.stream().map(MessageBasicDto::fromMessage).toList();
-        return ResponseEntity.ok(ApiResponse.success(messageDtoList));
+    public ResponseEntity<ApiResponse<Page<MessageBasicDto>>> getChannelMessages(
+            @PathVariable long channelId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "ASC") String sortDirection) {
+        Sort.Direction direction = Sort.Direction.fromString(sortDirection);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+        Page<Message> messages = messageService.findMessagesByChannelId(channelId, pageable);
+        Page<MessageBasicDto> messageDtoPage = messages.map(MessageBasicDto::fromMessage);
+        return ResponseEntity.ok(ApiResponse.success(messageDtoPage));
     }
 
     public record MessageCreationObject(String content) {}

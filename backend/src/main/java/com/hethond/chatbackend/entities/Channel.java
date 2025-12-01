@@ -52,9 +52,8 @@ public class Channel {
     }
 
     public boolean hasMemberWithId(UUID userId) {
-        // TODO -- maybe there is a quicker way to determine this
         for (User member : members) {
-            if (member.getId() == userId)
+            if (member.getId().equals(userId))
                 return true;
         }
         return false;

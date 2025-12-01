@@ -1,4 +1,4 @@
-const LOGIN_REQUEST_URL = "https://chat.hethond.com/api/auth/login";
+const LOGIN_REQUEST_URL = "http://localhost:8080/api/auth/login";
 
 const usernameField = document.getElementById("username");
 const passwordField = document.getElementById("password");
@@ -52,4 +52,4 @@ document.getElementById("login-form")
     .addEventListener("submit", (event) => {
         event.preventDefault();
         login();
-});
+    });

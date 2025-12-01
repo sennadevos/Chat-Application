@@ -31,6 +31,7 @@ public class WebSecurityConfig {
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/ws/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/auth/*").permitAll()
+                .requestMatchers("/health", "/status", "/info").permitAll()
                 .requestMatchers("/users").hasRole("ADMIN")
                 .anyRequest().authenticated()
         );

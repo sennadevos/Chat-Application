@@ -51,6 +51,13 @@ public class HandshakeHandler extends HttpSessionHandshakeInterceptor {
 
     private String extractToken(final ServerHttpRequest request) {
         final Map<String, List<String>> params = UriComponentsBuilder.fromUri(request.getURI()).build().getQueryParams();
-        return params.get("token").get(0);
+        final List<String> tokenParam = params.get("token");
+
+        if (tokenParam == null || tokenParam.isEmpty()) {
+            logger.error("WebSocket handshake attempted without token parameter");
+            throw new IllegalArgumentException("Missing token parameter");
+        }
+
+        return tokenParam.get(0);
     }
 }

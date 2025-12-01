@@ -24,5 +24,21 @@ public class ChannelController {
         return ResponseEntity.ok(ApiResponse.success(ChannelWithUsersDto.fromChannel(channel)));
     }
 
-    // TODO -- Implement a method for adding members to a channel
+    public record AddMemberRequest(String userId) {}
+
+    @PostMapping("/{id}/members")
+    public ResponseEntity<ApiResponse<ChannelWithUsersDto>> addMember(
+            @PathVariable long id,
+            @RequestBody AddMemberRequest request) {
+        Channel channel = channelService.addMemberToChannel(id, java.util.UUID.fromString(request.userId()));
+        return ResponseEntity.ok(ApiResponse.success(ChannelWithUsersDto.fromChannel(channel)));
+    }
+
+    @DeleteMapping("/{id}/members/{userId}")
+    public ResponseEntity<ApiResponse<ChannelWithUsersDto>> removeMember(
+            @PathVariable long id,
+            @PathVariable String userId) {
+        Channel channel = channelService.removeMemberFromChannel(id, java.util.UUID.fromString(userId));
+        return ResponseEntity.ok(ApiResponse.success(ChannelWithUsersDto.fromChannel(channel)));
+    }
 }

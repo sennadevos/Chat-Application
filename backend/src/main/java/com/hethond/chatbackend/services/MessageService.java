@@ -6,6 +6,8 @@ import com.hethond.chatbackend.entities.Message;
 import com.hethond.chatbackend.entities.User;
 import com.hethond.chatbackend.repositories.MessageRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -49,5 +51,11 @@ public class MessageService {
         // Check if channel exists
         channelService.findChannelById(channelId);
         return messageRepository.findByChannelId(channelId);
+    }
+
+    public Page<Message> findMessagesByChannelId(long channelId, Pageable pageable) {
+        // Check if channel exists
+        channelService.findChannelById(channelId);
+        return messageRepository.findByChannelId(channelId, pageable);
     }
 }
