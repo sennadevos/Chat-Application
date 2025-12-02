@@ -1,0 +1,812 @@
+openapi: 3.0.3
+info:
+  title: Chat Application Backend API
+  description: |
+    REST API for a chat application supporting user authentication, channels, and messaging.
+
+    ## Authentication
+    Most endpoints require authentication via a session token obtained through the `/auth/login` endpoint.
+    Include the token in the `Authorization` header as a Bearer token.
+  version: 0.1.0
+  contact:
+    name: API Support
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+tags:
+  - name: Authentication
+    description: User authentication and registration endpoints
+  - name: Users
+    description: User management endpoints
+  - name: Channels
+    description: Channel management endpoints
+  - name: Messages
+    description: Message operations within channels
+  - name: Status
+    description: Health check and system status endpoints
+
+paths:
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Authenticate user
+      description: Login with username and password to receive a session token
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: string
+                        description: Session token to use for authenticated requests
+                        example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register new user
+      description: Create a new user account. Account will be inactive until phone verification is completed.
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignupRequest'
+      responses:
+        '200':
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserBasicDto'
+        '409':
+          description: Conflict - Username or phone already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: CONFLICT
+                message: "An account already exists with this username or phone number."
+
+  /auth/verify:
+    post:
+      tags:
+        - Authentication
+      summary: Verify phone number
+      description: Verify phone number with verification code sent during registration
+      operationId: verifyPhone
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerificationRequest'
+      responses:
+        '200':
+          description: Verification successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Invalid verification code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /users:
+    get:
+      tags:
+        - Users
+      summary: Get all users
+      description: Retrieve a list of all users. May be restricted to admin users only.
+      operationId: getAllUsers
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of users retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/UserWithChannelsDto'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /users/@me:
+    get:
+      tags:
+        - Users
+      summary: Get current user
+      description: Retrieve the authenticated user's profile information
+      operationId: getCurrentUser
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserWithChannelsDto'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /users/{id}:
+    get:
+      tags:
+        - Users
+      summary: Get user by ID
+      description: Retrieve a specific user's information by their UUID
+      operationId: getUserById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserWithChannelsDto'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /channels/{id}:
+    get:
+      tags:
+        - Channels
+      summary: Get channel by ID
+      description: Retrieve channel information including all members
+      operationId: getChannel
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Channel ID
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Channel retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ChannelWithUsersDto'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /channels/{id}/members:
+    post:
+      tags:
+        - Channels
+      summary: Add member to channel
+      description: Add a user to a channel by their user ID
+      operationId: addMemberToChannel
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Channel ID
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddMemberRequest'
+      responses:
+        '200':
+          description: Member added successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ChannelWithUsersDto'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /channels/{id}/members/{userId}:
+    delete:
+      tags:
+        - Channels
+      summary: Remove member from channel
+      description: Remove a user from a channel
+      operationId: removeMemberFromChannel
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Channel ID
+          schema:
+            type: integer
+            format: int64
+        - name: userId
+          in: path
+          required: true
+          description: User UUID to remove
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Member removed successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ChannelWithUsersDto'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /channels/{channelId}/messages:
+    get:
+      tags:
+        - Messages
+      summary: Get channel messages
+      description: Retrieve paginated messages from a channel
+      operationId: getChannelMessages
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          description: Channel ID
+          schema:
+            type: integer
+            format: int64
+        - name: page
+          in: query
+          description: Page number (0-indexed)
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+        - name: size
+          in: query
+          description: Number of messages per page
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 100
+        - name: sortBy
+          in: query
+          description: Field to sort by
+          schema:
+            type: string
+            default: id
+        - name: sortDirection
+          in: query
+          description: Sort direction
+          schema:
+            type: string
+            enum: [ASC, DESC]
+            default: ASC
+      responses:
+        '200':
+          description: Messages retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PageMessageBasicDto'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    post:
+      tags:
+        - Messages
+      summary: Create message
+      description: Send a new message to a channel. User must be a member of the channel.
+      operationId: createMessage
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          description: Channel ID
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageCreationRequest'
+      responses:
+        '200':
+          description: Message created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/MessageBasicDto'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          description: Forbidden - User is not a member of the channel
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: FORBIDDEN
+                message: "You don't have permission to create messages in this channel."
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /health:
+    get:
+      tags:
+        - Status
+      summary: Health check
+      description: Check if the service is up and running
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: UP
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: "2025-12-01T10:30:00Z"
+
+  /info:
+    get:
+      tags:
+        - Status
+      summary: Application info
+      description: Get application version and build information
+      operationId: getInfo
+      responses:
+        '200':
+          description: Application information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  app:
+                    type: string
+                    example: ChatBackend
+                  version:
+                    type: string
+                    example: "0.1.0"
+                  buildTime:
+                    type: string
+                    format: date-time
+                    example: "2025-11-30T15:00:00Z"
+
+  /status:
+    get:
+      tags:
+        - Status
+      summary: Combined status
+      description: Get combined health and version information
+      operationId: getStatus
+      responses:
+        '200':
+          description: Status information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: UP
+                  version:
+                    type: string
+                    example: "0.1.0"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: "2025-12-01T10:30:00Z"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Session token obtained from /auth/login endpoint
+
+  schemas:
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          description: Username for authentication
+          example: john_doe
+        password:
+          type: string
+          format: password
+          description: User password
+          example: securePassword123
+
+    SignupRequest:
+      type: object
+      required:
+        - phone
+        - username
+        - password
+      properties:
+        phone:
+          type: string
+          description: Phone number (used for verification)
+          example: "+1234567890"
+        username:
+          type: string
+          description: Desired username (must be unique)
+          example: john_doe
+        password:
+          type: string
+          format: password
+          description: User password
+          example: securePassword123
+
+    VerificationRequest:
+      type: object
+      required:
+        - phone
+        - code
+      properties:
+        phone:
+          type: string
+          description: Phone number to verify
+          example: "+1234567890"
+        code:
+          type: string
+          description: Verification code received via SMS
+          example: "123456"
+
+    AddMemberRequest:
+      type: object
+      required:
+        - userId
+      properties:
+        userId:
+          type: string
+          format: uuid
+          description: UUID of the user to add to the channel
+          example: "123e4567-e89b-12d3-a456-426614174000"
+
+    MessageCreationRequest:
+      type: object
+      required:
+        - content
+      properties:
+        content:
+          type: string
+          description: Message content
+          example: "Hello, world!"
+
+    UserBasicDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: User UUID
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        phone:
+          type: string
+          description: User phone number
+          example: "+1234567890"
+        username:
+          type: string
+          description: Username
+          example: john_doe
+
+    UserWithChannelsDto:
+      allOf:
+        - $ref: '#/components/schemas/UserBasicDto'
+        - type: object
+          properties:
+            channels:
+              type: array
+              description: List of channels the user is a member of
+              items:
+                $ref: '#/components/schemas/ChannelBasicDto'
+
+    ChannelBasicDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Channel ID
+          example: 1
+        name:
+          type: string
+          description: Channel name
+          example: "General"
+
+    ChannelWithUsersDto:
+      allOf:
+        - $ref: '#/components/schemas/ChannelBasicDto'
+        - type: object
+          properties:
+            members:
+              type: array
+              description: List of users who are members of this channel
+              items:
+                $ref: '#/components/schemas/UserBasicDto'
+
+    MessageBasicDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Message ID
+          example: 1
+        author:
+          $ref: '#/components/schemas/UserBasicDto'
+        channel:
+          $ref: '#/components/schemas/ChannelBasicDto'
+        content:
+          type: string
+          description: Message content
+          example: "Hello, world!"
+
+    PageMessageBasicDto:
+      type: object
+      description: Paginated response containing messages
+      properties:
+        content:
+          type: array
+          description: List of messages on current page
+          items:
+            $ref: '#/components/schemas/MessageBasicDto'
+        pageable:
+          type: object
+          properties:
+            pageNumber:
+              type: integer
+              description: Current page number (0-indexed)
+              example: 0
+            pageSize:
+              type: integer
+              description: Number of items per page
+              example: 50
+            sort:
+              type: object
+              properties:
+                sorted:
+                  type: boolean
+                  example: true
+                unsorted:
+                  type: boolean
+                  example: false
+            offset:
+              type: integer
+              description: Offset of the first item
+              example: 0
+            paged:
+              type: boolean
+              example: true
+            unpaged:
+              type: boolean
+              example: false
+        totalElements:
+          type: integer
+          format: int64
+          description: Total number of messages across all pages
+          example: 150
+        totalPages:
+          type: integer
+          description: Total number of pages
+          example: 3
+        last:
+          type: boolean
+          description: Whether this is the last page
+          example: false
+        first:
+          type: boolean
+          description: Whether this is the first page
+          example: true
+        size:
+          type: integer
+          description: Page size
+          example: 50
+        number:
+          type: integer
+          description: Current page number
+          example: 0
+        numberOfElements:
+          type: integer
+          description: Number of elements on current page
+          example: 50
+        empty:
+          type: boolean
+          description: Whether the page is empty
+          example: false
+
+    ApiResponse:
+      type: object
+      properties:
+        code:
+          type: string
+          enum:
+            - SUCCESS
+            - BAD_CREDENTIALS
+            - USER_NOT_FOUND
+            - SESSION_NOT_FOUND
+            - ACCESS_DENIED
+            - ACCOUNT_BANNED
+            - ACCOUNT_UNVERIFIED
+            - ACCOUNT_INACTIVE
+            - INTERNAL_SERVER_ERROR
+            - UNAUTHORIZED
+            - FORBIDDEN
+            - CONFLICT
+            - NOT_FOUND
+            - VERIFICATION_FAILED
+          description: Response code indicating the result
+          example: SUCCESS
+        message:
+          type: string
+          description: Human-readable message
+          example: Success
+        data:
+          description: Response data (varies by endpoint)
+
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Error code
+          example: NOT_FOUND
+        message:
+          type: string
+          description: Error message
+          example: "Resource not found"
+
+  responses:
+    UnauthorizedError:
+      description: Unauthorized - Invalid or missing authentication token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: UNAUTHORIZED
+            message: "Authentication required"
+
+    ForbiddenError:
+      description: Forbidden - User does not have permission
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            accountBanned:
+              value:
+                code: ACCOUNT_BANNED
+                message: "Account has been banned"
+            accountInactive:
+              value:
+                code: ACCOUNT_INACTIVE
+                message: "Account is inactive"
+            accountUnverified:
+              value:
+                code: ACCOUNT_UNVERIFIED
+                message: "Account has not been verified"
+
+    NotFoundError:
+      description: Not Found - Requested resource does not exist
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: NOT_FOUND
+            message: "Resource not found"

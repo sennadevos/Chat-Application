@@ -1,0 +1,39 @@
+name: Deploy OpenAPI Docs
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'docs/openapi.yml'
+      - '.github/workflows/openapi-docs.yml'
+
+  workflow_dispatch:
+
+jobs:
+  deploy-docs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build Redoc Documentation
+        run: |
+          mkdir -p public/docs
+          npx @redocly/cli build-docs docs/openapi.yml --output public/docs/index.html --title "My API"
+          cp docs/openapi.yml public/docs/openapi.yml
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
+          force_orphan: true
+          commit_message: "Deploy OpenAPI Docs – ${{ github.sha }}"
