@@ -1,0 +1,39 @@
+name: Deploy OpenAPI Docs
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'docs/openapi.yml'
+
+workflow_dispatch:
+
+jobs:
+  deploy-docs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create docs folder in build output
+        run: mkdir -p public/docs
+
+      - name: Generate Redoc page
+        uses: deining/redoc-cli-action@v1
+        with:
+          args: bundle docs/openapi.yml --output public/docs/index.html --title "My API"
+
+      - name: Copy raw OpenAPI spec
+        run: cp docs/openapi.yml public/docs/openapi.yml
+
+      - name: Deploy only the /docs folder to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public/docs
+          destination_dir: docs
+          force_orphan: true
+          commit_message: "Deploy OpenAPI Docs – ${{ github.sha }}"
