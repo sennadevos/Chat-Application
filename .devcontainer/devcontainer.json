@@ -4,7 +4,7 @@
   "service": "devcontainer",
   "workspaceFolder": "/workspace",
   "remoteUser": "root",
-  "postCreateCommand": "curl -s 'https://get.sdkman.io' | bash && bash -c 'source ~/.sdkman/bin/sdkman-init.sh && sdk install java 21.0.9-graal && sdk install gradle 9.2.1'",
+  "postCreateCommand": "curl -s 'https://get.sdkman.io' | bash && bash -c 'source ~/.sdkman/bin/sdkman-init.sh && sdk install java 21.0.9-graal && sdk install gradle 9.2.1' && curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash",
   "customizations": {
     "vscode": {
       "extensions": [

@@ -1,9 +1,0 @@
-* {
-    font: Inter
-}
-
-html,body { height: 100%; margin: 0; padding: 0 }
-
-.input-wrapper input {
-    @apply py-3 px-2 text-sm w-full border rounded-md border-gray-500
-}
